@@ -2,7 +2,7 @@ import numpy as np
 
 class Loan():
     def __init__(self, loan_id, grade, int_rate, term, amount, issue_date, 
-                 last_date, defaults, investment, total_payment, total_principle):
+                 last_date, defaults, investment, total_payment, total_principle, recoveries):
         self.id = loan_id
         self.grade = grade
         self.int_rate = int_rate
@@ -16,6 +16,7 @@ class Loan():
         self.defaults = defaults
         self.total_payment = total_payment
         self.total_principle = total_principle
+        self.recoveries = recoveries
         
         
         self.term_realized = self.last_date - self.issue_date
@@ -54,6 +55,9 @@ class Loan():
     
     def get_imbalance(self):
         return self.imbalance * self.scale
+
+    def get_abs_imbalance(self):
+        return abs(self.imbalance) * self.scale
     
     def check_completion(self):
         if self.remaining_term == 0:
