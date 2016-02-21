@@ -1,6 +1,10 @@
+import warnings
+from collections import defaultdict
+from exceptions import ZeroDivisionError
+
 import pandas as pd
 import numpy as np
-from collections import defaultdict
+
 from loan import Loan
 from investor import Investor
 
@@ -37,31 +41,26 @@ class Backtest():
         self.stats['imbalance %'][self.month] = self.stats['imbalance'][self.month] / self.stats['net worth'][self.month]
         self.stats['abs imbalance %'][self.month] = self.stats['abs imbalance'][self.month] / self.stats['net worth'][self.month]
         
-        #for key in self.statistics:
-        #    print '    ', key, self.statistics[key][self.month]
-        
-        # print '    available contracts: ', purchase, 
-        # print '    loans held: ', len(self.investor.loans) 
-        # print '    cash held:  ', self.investor.balance
-        # print '    net_worth:  ', self.investor.get_net_worth()
-        # print '    imbalance:  ', self.investor.cum_imbalance
         self.month += 1
         
     def buy(self):
         month_db = self.db[self.db['issue_d'] == self.month]
         purchase_count = np.floor(self.investor.balance / self.buy_size)
-        if purchase_count > 0:
-            buy_dict = self.buy_solver(self.month, self.investor, month_db, purchase_count)
+        # if purchase_count > 0: ### We can just pass 0 to the solver and get back an empty dataframe for now
+        buy_dict = self.buy_solver(self.month, self.investor, month_db, purchase_count)
 
-            buy_df = buy_dict['loans']
-            buy_matching = buy_dict['matching quantity']
-            buy_available = buy_dict['available quantity']
+        buy_df = buy_dict['loans']
+        buy_matching = buy_dict['matching quantity']
+        buy_available = buy_dict['available quantity']
 
-            new_loans = buy_df.apply(self.map_loan_row, axis=1)
+        if buy_df.empty:
+            buy_df = pd.DataFrame()
 
+        new_loans = buy_df.apply(self.map_loan_row, axis=1)
 
-            self.investor.buy_loans(new_loans)
-            return new_loans, buy_matching, buy_available        
+        self.investor.buy_loans(new_loans)
+        return new_loans, buy_matching, buy_available   
+
     
     def map_loan_row(self, row):
         return Loan(
@@ -89,13 +88,20 @@ class Backtest():
         self.stats['monthly return'] = self.stats['net worth'].diff().shift(-1) / self.stats['net worth']
         self.stats['annualized return'] = (self.stats['net worth'].resample('A').diff().shift(-1) / self.stats['net worth'].resample('A')).resample('M', fill_method='ffill')
         self.stats['realized liquidity'] = self.stats['loans added'] / self.stats['available loans']
-        self.stats['realized vs strategy liquidity'] = self.stats['loans added'] / self.stats['strategy available loans']
-        self.stats['strategy liquidity'] = self.stats['strategy available loans'] / self.stats['available loans']
+        self.stats['realized vs strategy liquidity'] = self.stats['loans added'] / self.stats['strategy available loans'].replace(0, np.nan)
+        self.stats['strategy liquidity'] = self.stats['strategy available loans'] / self.stats['available loans'].replace(0, np.nan)
+
 
         self.stats['growth of $1'] = self.stats['net worth'] / self.stats['net worth'].iloc[0]
         
         self.stats_dict = dict()
-        self.stats_dict['sharpe'] = self.stats['net worth'].diff().mean() / self.stats['net worth'].diff().std() * np.sqrt(12)
+
+        try:
+            self.stats_dict['sharpe'] = self.stats['net worth'].diff().mean() / self.stats['net worth'].diff().std() * np.sqrt(12)
+        except ZeroDivisionError as e:
+            warnings.warn('Division by zero: Sharpe Ratio')
+            self.stats_dict['sharpe'] = np.nan
+
         self.stats_dict = pd.Series(self.stats_dict)
             
         return self.stats
@@ -115,17 +121,27 @@ def generic_buy_solver(month, investor, month_db, number):
     }
     '''
     return_dict = {
-        'loans': month_db.iloc[0:number - 1, :],
+        'loans': month_db.iloc[0:number],
         'matching quantity': month_db.shape[0],
         'available quantity': month_db.shape[0]
     }
     return return_dict
 
 def single_buy_solver(month, investor, month_db, number):
-    buy_number = min(number - 1, 1)
+    buy_number = min(number, 1)
+    loan_df = month_db.iloc[0:buy_number]
     return_dict = {
-        'loans': month_db.iloc[0:buy_number],
-        'matching quantity': buy_number + 1,
+        'loans': loan_df,
+        'matching quantity': buy_number,
+        'available quantity': month_db.shape[0]
+    }
+    return return_dict
+
+def zero_buy_solver(month, investor, month_db, number):
+    buy_number = 0
+    return_dict = {
+        'loans': month_db.iloc[0:0],
+        'matching quantity': buy_number,
         'available quantity': month_db.shape[0]
     }
     return return_dict

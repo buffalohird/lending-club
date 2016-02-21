@@ -1,12 +1,10 @@
+import datetime
+
 import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-import datetime
-# %matplotlib inline
-# plt.style.use('ggplot')
-# plt.rcParams['figure.figsize'] = (15.0, 7.0)
-# sns.set(style="ticks")
+
 
 def get_db_folder():
   downloads = '/Users/thegator12321/Downloads/'
@@ -16,12 +14,12 @@ def get_db_folder():
   }
   return db_dict
 
+
 def df_ols(df, y, x):
     for var in [x, y]:
         if not hasattr(var, '__iter__'):
             var = [var]
     return pd.ols(y=df[y], x=df[x])
-
 
 
 def make_df_numeric(df, remove_nans=False):
@@ -31,11 +29,13 @@ def make_df_numeric(df, remove_nans=False):
       return fixed_df.pipe(remove_nans)
     return fixed_df
 
+
 def fix_issue_date(x):
     try:
         return pd.Period(datetime.datetime.strptime(str(x), '%b-%y'), 'M')
     except: 
         return None
+
 
 def create_relevant_subset(df, grades=['A','B','C','D','E','F','G'], edate='20130101'):
     df['loan_status'] = df['loan_status'].str.replace('Does not meet the credit policy. Status:', '')
@@ -45,6 +45,7 @@ def create_relevant_subset(df, grades=['A','B','C','D','E','F','G'], edate='2013
     df['issue_d'] = df['issue_d'].map(fix_issue_date).reindex()
     df = df[df['issue_d'] < pd.Period(edate, freq='M')]
     return df
+
 
 def create_factors(short_df, return_components=True):
     # create y variables
@@ -98,7 +99,6 @@ def create_factors(short_df, return_components=True):
     if return_components:
       return short_df, purposes, states
     return short_df
-
 
 
 def remove_nans(short_df):
