@@ -63,7 +63,7 @@ class Loan():
         if self.remaining_term == 0:
             self.imbalance -= self.total_payment * (1.0 - self.fee)
             self.imbalance_ratio = self.imbalance / self.total_payment
-            print self.imbalance_ratio, self.defaults
+            # print self.imbalance_ratio, self.defaults
             self.complete = True
 
 

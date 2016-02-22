@@ -9,8 +9,8 @@ from loan import Loan
 from investor import Investor
 
 class Backtest():
-    def __init__(self, sdate, edate, buy_solver, db, buy_size=25.0):
-        self.investor = Investor(1000)
+    def __init__(self, sdate, edate, buy_solver, db, cash=1000, buy_size=25.0):
+        self.investor = Investor(cash)
         self.month = pd.Period(sdate, freq='M')
         self.end_month = pd.Period(edate, freq='M')
         self.buy_solver = buy_solver
@@ -56,6 +56,10 @@ class Backtest():
         if buy_df.empty:
             buy_df = pd.DataFrame()
 
+        print buy_df.shape
+
+
+
         new_loans = buy_df.apply(self.map_loan_row, axis=1)
 
         self.investor.buy_loans(new_loans)
@@ -63,6 +67,7 @@ class Backtest():
 
     
     def map_loan_row(self, row):
+        # print '####', row['recoveries']
         return Loan(
             loan_id=row['id'],
             grade=row['grade'],
@@ -90,6 +95,7 @@ class Backtest():
         self.stats['realized liquidity'] = self.stats['loans added'] / self.stats['available loans']
         self.stats['realized vs strategy liquidity'] = self.stats['loans added'] / self.stats['strategy available loans'].replace(0, np.nan)
         self.stats['strategy liquidity'] = self.stats['strategy available loans'] / self.stats['available loans'].replace(0, np.nan)
+        self.stats['default rate'] = self.stats['defaults'] / self.stats['loan held'].replace(0, np.nan)
 
 
         self.stats['growth of $1'] = self.stats['net worth'] / self.stats['net worth'].iloc[0]

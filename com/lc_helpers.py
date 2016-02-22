@@ -78,6 +78,7 @@ def create_factors(short_df, return_components=True):
     short_df['credit_history'] = np.maximum((short_df['issue_d'] - latest), 1)
     
     short_df['last_pymnt_d'] = short_df['last_pymnt_d'].map(fix_issue_date).reindex() 
+    short_df = short_df[~short_df['last_pymnt_d'].isnull()]
     
     import string
     short_df['grade_int'] = short_df['grade'].apply(lambda x: string.lowercase.index(x.lower()))
@@ -91,7 +92,8 @@ def create_factors(short_df, return_components=True):
     
     for column in ['id', 'member_id', 'loan_amnt', 'dti', 'mths_since_last_delinq', 'mths_since_last_record', 'revol_bal', 
                'revol_util', 'annual_inc', 'open_acc', 'total_acc', 'credit_history', 'emp_length', 'own_home',
-               'pub_rec', 'installment', 'mths_since_last_major_derog', 'joint_account']:
+               'pub_rec', 'installment', 'mths_since_last_major_derog', 'joint_account', 'recoveries', 'total_rec_prncp'
+               ,'total_pymnt']:
         short_df[column] = short_df[column].astype(float)
         
     for column in ['loan_status']:
