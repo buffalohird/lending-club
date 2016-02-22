@@ -126,6 +126,19 @@ class Backtest():
         pass
 
 
+
+def simple_filter_buy_solver(month, investor, month_db, number, liquidity_limit):
+    available_quantity = month_db.shape[0]
+    number = min(number, int(np.floor(liquidity_limit * available_quantity)))
+
+    return_df = month_db[month_db['emp_length'] > 5.0]
+    return_dict = {
+        'loans': return_df.iloc[0:number],
+        'matching quantity': return_df.shape[0],
+        'available quantity': available_quantity
+    }
+    return return_dict
+
 def generic_buy_solver(month, investor, month_db, number, liquidity_limit):
     '''
     :param month: pandas.Period, the month to be solved for

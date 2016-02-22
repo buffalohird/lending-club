@@ -1,4 +1,6 @@
 import datetime
+import os
+import warnings
 
 import pandas as pd
 import numpy as np
@@ -12,9 +14,26 @@ def get_db_folder():
     'training': '{}{}'.format(downloads, 'LoanStats3a.csv'),
     'testing': '{}{}'.format(downloads, 'LoanStats3b.csv'),
     'testing2': '{}{}'.format(downloads, 'LoanStats3c.csv'),
-    'testing3': '{}{}'.format(downloads, 'LoanStats3d.csv')
+    'testing3': '{}{}'.format(downloads, 'LoanStats3d.csv'),
+    'complete': '{}{}'.format(downloads, 'LoanStatsTotal.csv'),
+    'cache': '{}{}'.format(downloads, 'loan_cache.hdf5')
   }
   return db_dict
+
+def get_cache_historic(rewrite=False):
+    db = get_db_folder()
+    cache_file = db['cache']
+    if os.path.exists(cache_file) and not rewrite:
+        return pd.read_hdf(cache_file, 'historic')
+    else:
+        warnings.warn('Historic Cache does not exist, creating at {cache_file}'.format(cache_file=cache_file))
+        training = pd.read_csv(db['training']).pipe(make_df_numeric, fix_nans=True)
+        testing = pd.read_csv(db['testing']).pipe(make_df_numeric, fix_nans=True)
+        testing2 = pd.read_csv(db['testing2']).pipe(make_df_numeric, fix_nans=True)
+        testing3 = pd.read_csv(db['testing3']).pipe(make_df_numeric, fix_nans=True)
+        historic_df = pd.concat([training, testing, testing2, testing3])
+        historic_df.to_hdf(cache_file, 'historic')
+
 
 
 def df_ols(df, y, x):
