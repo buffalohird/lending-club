@@ -10,7 +10,9 @@ def get_db_folder():
   downloads = '/Users/thegator12321/Downloads/'
   db_dict = {
     'training': '{}{}'.format(downloads, 'LoanStats3a.csv'),
-    'testing': '{}{}'.format(downloads, 'LoanStats3b.csv')
+    'testing': '{}{}'.format(downloads, 'LoanStats3b.csv'),
+    'testing2': '{}{}'.format(downloads, 'LoanStats3c.csv'),
+    'testing3': '{}{}'.format(downloads, 'LoanStats3d.csv')
   }
   return db_dict
 
@@ -22,10 +24,10 @@ def df_ols(df, y, x):
     return pd.ols(y=df[y], x=df[x])
 
 
-def make_df_numeric(df, remove_nans=False):
+def make_df_numeric(df, edate='20170101', fix_nans=False):
     
-    fixed_df = df.pipe(create_relevant_subset).pipe(create_factors, return_components=False)
-    if remove_nans:
+    fixed_df = df.pipe(create_relevant_subset, edate=edate).pipe(create_factors, return_components=False)
+    if fix_nans:
       return fixed_df.pipe(remove_nans)
     return fixed_df
 

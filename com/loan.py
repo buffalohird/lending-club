@@ -17,6 +17,7 @@ class Loan():
         self.total_payment = total_payment
         self.total_principle = total_principle
         self.recoveries = recoveries
+        self.imbalance_ratio = np.nan
         
         
         self.term_realized = self.last_date - self.issue_date
@@ -33,6 +34,27 @@ class Loan():
         self.imbalance = 0
         self.complete = False
         self.fee = 0.01
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'grade': self.grade,
+            'int_rate': self.int_rate,
+            'amount': self.initial_amount,
+            'term': self.term,
+            'remaining_amount': self.get_pv(),
+            'issue_date': self.issue_date,
+            'end_date': self.last_date,
+            'investment': self.investment,
+            'defaulted': self.defaults,
+            'absolute_imbalance': self.get_abs_imbalance(),
+            'installment': self.installment * self.scale,
+            'imbalance': self.get_imbalance(),
+            'completed': self.complete,
+            'imbalance_percentage': self.imbalance_ratio,
+            'remaining_terms': self.remaining_term,
+            'fee': self.fee,
+        }
         
     def get_pv(self):
         # get present value
