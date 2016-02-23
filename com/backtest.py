@@ -88,9 +88,9 @@ class Backtest():
         self.stats['defaults'] = self.stats['cumulative defaults'].diff()
         self.stats['monthly return'] = self.stats['net worth'].diff().shift(-1) / self.stats['net worth']
         self.stats['annualized return'] = self.stats['monthly return'].resample('A', how='mean').resample('M', fill_method='ffill')
-        self.stats['realized liquidity'] = self.stats['loans added'] / self.stats['available loans']
-        self.stats['realized vs strategy liquidity'] = self.stats['loans added'] / self.stats['strategy available loans'].replace(0, np.nan)
-        self.stats['strategy liquidity'] = self.stats['strategy available loans'] / self.stats['available loans'].replace(0, np.nan)
+        self.stats['total liquidity'] = self.stats['loans added'] / self.stats['available loans']
+        self.stats['strategy liquidity'] = self.stats['loans added'] / self.stats['strategy available loans'].replace(0, np.nan)
+        self.stats['strategy vs total liquidity'] = self.stats['strategy available loans'] / self.stats['available loans'].replace(0, np.nan)
         self.stats['default rate'] = self.stats['defaults'] / self.stats['loans held'].replace(0, np.nan)
         self.stats['growth of $1'] = self.stats['net worth'] / self.stats['net worth'].iloc[0]
         
@@ -128,13 +128,27 @@ class Backtest():
 
 
 def simple_filter_buy_solver(month, investor, month_db, number, liquidity_limit):
+    # simulate more liquidity
+    # if month_db.shape[0] < 20:
+    #     month_db = pd.concat([month_db for _ in xrange(0, 20 / month_db.shape[0])])
     available_quantity = month_db.shape[0]
-    number = min(number, int(np.floor(liquidity_limit * available_quantity)))
-
+    return_df = month_db[
+        (month_db['emp_length'] > 5.0) & 
+        (month_db['state_CA'] == 0) &
+        (month_db['own_home'] == 1) &
+        (month_db['total_acc'] > 15) &
+        ((month_db['purpose_debt_consolidation'] == 1) | (month_db['purpose_wedding'] == 1) | (month_db['purpose_moving'] == 1) | (month_db['purpose_house'] == 1))
+    ]
+    print 'available', available_quantity
+    matching_quantity = return_df.shape[0]
+    print 'matching', matching_quantity
+    print 'solver number', number
+    number = min(number, int(np.floor(liquidity_limit * matching_quantity)))
+    print 'solver number restricted', number
     return_df = month_db[month_db['emp_length'] > 5.0]
     return_dict = {
         'loans': return_df.iloc[0:number],
-        'matching quantity': return_df.shape[0],
+        'matching quantity': matching_quantity,
         'available quantity': available_quantity
     }
     return return_dict
