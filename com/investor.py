@@ -18,7 +18,7 @@ class Investor():
             if loan.complete:
                 self.cum_defaults += loan.defaults
                 self.cum_imbalance += loan.get_imbalance()
-                # self.abs_cum_imbalance += loan.get_abs_imbalance()
+                self.abs_cum_imbalance += loan.get_abs_imbalance()
                 self.remove_loan(loan)
                 
     def buy_loans(self, loans):

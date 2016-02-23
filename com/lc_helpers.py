@@ -1,12 +1,12 @@
+import datetime
+import os
+import warnings
+
 import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-import datetime
-# %matplotlib inline
-# plt.style.use('ggplot')
-# plt.rcParams['figure.figsize'] = (15.0, 7.0)
-# sns.set(style="ticks")
+
 
 states = ['state_MT', 'state_NE', 'state_NV', 'state_NH', 'state_NJ',
           'state_NM', 'state_NY', 'state_NC', 'state_ND', 'state_OH',
@@ -28,10 +28,30 @@ purposes = ['purpose_car', 'purpose_credit_card', 'purpose_debt_consolidation',
 def get_db_folder():
   data_folder = '../data/'
   db_dict = {
-    'training': '{}{}'.format(data_folder, 'LoanStats3a.csv'),
-    'testing': '{}{}'.format(data_folder, 'LoanStats3b.csv')
+    'training': '{}{}'.format(downloads, 'LoanStats3a.csv'),
+    'testing': '{}{}'.format(downloads, 'LoanStats3b.csv'),
+    'testing2': '{}{}'.format(downloads, 'LoanStats3c.csv'),
+    'testing3': '{}{}'.format(downloads, 'LoanStats3d.csv'),
+    'complete': '{}{}'.format(downloads, 'LoanStatsTotal.csv'),
+    'cache': '{}{}'.format(downloads, 'loan_cache.hdf5')
   }
   return db_dict
+
+def get_cache_historic(rewrite=False):
+    db = get_db_folder()
+    cache_file = db['cache']
+    if os.path.exists(cache_file) and not rewrite:
+        return pd.read_hdf(cache_file, 'historic')
+    else:
+        warnings.warn('Historic Cache does not exist, creating at {cache_file}'.format(cache_file=cache_file))
+        training = pd.read_csv(db['training']).pipe(make_df_numeric, fix_nans=True)
+        testing = pd.read_csv(db['testing']).pipe(make_df_numeric, fix_nans=True)
+        testing2 = pd.read_csv(db['testing2']).pipe(make_df_numeric, fix_nans=True)
+        testing3 = pd.read_csv(db['testing3']).pipe(make_df_numeric, fix_nans=True)
+        historic_df = pd.concat([training, testing, testing2, testing3])
+        historic_df.to_hdf(cache_file, 'historic')
+
+
 
 def df_ols(df, y, x):
     for var in [x, y]:
@@ -40,19 +60,20 @@ def df_ols(df, y, x):
     return pd.ols(y=df[y], x=df[x])
 
 
+def make_df_numeric(df, edate='20170101', fix_nans=False):
 
-def make_df_numeric(df, remove_nans=False):
-
-    fixed_df = df.pipe(create_relevant_subset).pipe(create_factors, return_components=False)
-    if remove_nans:
+    fixed_df = df.pipe(create_relevant_subset, edate=edate).pipe(create_factors, return_components=False)
+    if fix_nans:
       return fixed_df.pipe(remove_nans)
     return fixed_df
+
 
 def fix_issue_date(x):
     try:
         return pd.Period(datetime.datetime.strptime(str(x), '%b-%y'), 'M')
     except:
         return None
+
 
 def create_relevant_subset(df, grades=['A','B','C','D','E','F','G'], edate='20130101'):
     df['loan_status'] = df['loan_status'].str.replace('Does not meet the credit policy. Status:', '')
@@ -62,6 +83,7 @@ def create_relevant_subset(df, grades=['A','B','C','D','E','F','G'], edate='2013
     df['issue_d'] = df['issue_d'].map(fix_issue_date).reindex()
     df = df[df['issue_d'] < pd.Period(edate, freq='M')]
     return df
+
 
 def create_factors(short_df, return_components=True):
     # create y variables
@@ -96,6 +118,7 @@ def create_factors(short_df, return_components=True):
     short_df['credit_history'] = np.maximum((short_df['issue_d'] - latest), 1)
 
     short_df['last_pymnt_d'] = short_df['last_pymnt_d'].map(fix_issue_date).reindex()
+    short_df = short_df[~short_df['last_pymnt_d'].isnull()]
 
     import string
     short_df['grade_int'] = short_df['grade'].apply(lambda x: string.lowercase.index(x.lower()))
@@ -109,7 +132,8 @@ def create_factors(short_df, return_components=True):
 
     for column in ['id', 'member_id', 'loan_amnt', 'dti', 'mths_since_last_delinq', 'mths_since_last_record', 'revol_bal',
                'revol_util', 'annual_inc', 'open_acc', 'total_acc', 'credit_history', 'emp_length', 'own_home',
-               'pub_rec', 'installment', 'mths_since_last_major_derog', 'joint_account']:
+               'pub_rec', 'installment', 'mths_since_last_major_derog', 'joint_account', 'recoveries', 'total_rec_prncp'
+               ,'total_pymnt']:
         short_df[column] = short_df[column].astype(float)
 
     for column in ['loan_status']:
@@ -117,7 +141,6 @@ def create_factors(short_df, return_components=True):
     if return_components:
       return short_df
     return short_df
-
 
 
 def remove_nans(short_df):
@@ -137,5 +160,4 @@ def remove_nans(short_df):
 
     for column in ['mths_since_last_delinq', 'mths_since_last_record',]:#'mths_since_last_major_derog']:
         short_df[column] = short_df[column].fillna(short_df[column].max())
-
     return short_df
