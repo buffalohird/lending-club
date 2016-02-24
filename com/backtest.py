@@ -17,17 +17,27 @@ class Backtest():
         self.db = db
         self.buy_size = buy_size
         self.liquidity_limit = liquidity_limit
+
+        self.buy_solver_name = self.buy_solver_lookup(self.buy_solver)
         
         self.stats = defaultdict(dict)
         self.loans = pd.DataFrame()
         self.current_loans = dict()
+
+    def buy_solver_lookup(self, function):
+        return {
+            simple_filter_buy_solver: 'Simple Filter',
+            generic_buy_solver: 'Generic n-Loan',
+            single_buy_solver: 'Single Buy',
+            zero_buy_solver: 'Zero Buy'
+        }[function]
     
     def solve_month(self):
         self.investor.get_payments()
         new_loans, matching_new_loans, available_new_loans = self.buy()
         
         self.loans = pd.concat([self.loans, new_loans], axis=0)
-        self.current_loans[self.month] = pd.DataFrame([loan.to_dict() for loan in self.investor.loans])
+        self.current_loans[self.month] = [loan for loan in self.investor.loans]
         self.stats['loans added'][self.month] = new_loans.shape[0]
         self.stats['strategy available loans'][self.month] = matching_new_loans
         self.stats['available loans'][self.month] = available_new_loans
@@ -63,7 +73,6 @@ class Backtest():
 
     
     def map_loan_row(self, row):
-        # print '####', row['recoveries']
         return Loan(
             loan_id=row['id'],
             grade=row['grade'],
@@ -105,17 +114,21 @@ class Backtest():
         self.stats_dict = pd.Series(self.stats_dict)
 
         self.loan_stats = dict()
+        self.current_loans = {month: pd.DataFrame([loan.to_dict() for loan in self.current_loans[month]]) for month in self.current_loans}
         self.loan_stats['grade'] = pd.DataFrame({month: self.current_loans[month]['grade'].value_counts() for month in self.current_loans if not self.current_loans[month].empty}).T.reindex(self.stats.index)
+        self.loan_stats['grade_int_rate'] = pd.DataFrame({month: self.current_loans[month].groupby('grade')['int_rate'].mean() for month in self.current_loans if not self.current_loans[month].empty}).T.reindex(self.stats.index)
         self.loan_stats['duration'] = pd.DataFrame({month: (self.current_loans[month]['end_date'] - month) for month in self.current_loans if not self.current_loans[month].empty}).T.reindex(self.stats.index) / 12
         self.loan_stats['int_rate'] = pd.DataFrame({month: self.current_loans[month]['int_rate'] for month in self.current_loans if not self.current_loans[month].empty}).T.reindex(self.stats.index)
         self.loan_stats['defaulted'] = pd.DataFrame({month: self.current_loans[month]['defaulted'] for month in self.current_loans if not self.current_loans[month].empty}).T.reindex(self.stats.index)
         self.loan_stats['remaining_amount'] = pd.DataFrame({month: self.current_loans[month]['remaining_amount'] for month in self.current_loans if not self.current_loans[month].empty}).T.reindex(self.stats.index)
-
+        self.loan_stats['imbalance_percentage'] = pd.DataFrame({month: self.current_loans[month]['imbalance_percentage'] for month in self.current_loans if not self.current_loans[month].empty}).T.reindex(self.stats.index)
         # TODO: add imbalance stats ya dickhead
 
         self.loan_stats_total = dict()
-        for category in ['duration', 'int_rate']: # self.loan_stats:
+        for category in ['duration', 'int_rate', 'imbalance_percentage']: # self.loan_stats:
             self.loan_stats_total[category] = pd.Series(self.loan_stats[category].values.flatten()).dropna()
+
+        self.loan_stats_total['imbalance_percentage'] = pd.Series(self.loan_stats_total['imbalance_percentage'].value_counts().index) # small hack to remove duplicates between months
         
         self.loan_stats_total['grade'] = self.loan_stats['grade'].sum()
 
