@@ -148,9 +148,9 @@ def simple_filter_buy_solver(month, investor, month_db, number, liquidity_limit)
         (month_db['emp_length'] > 5.0)
         # & (month_db['state_CA'] == 0)
         & (month_db['own_home'] == 1)
-        & (month_db['total_acc'] > 20)
-        & (month_db['open_acc'] > 15)
-        # & ((month_db['purpose_debt_consolidation'] == 1) | (month_db['purpose_wedding'] == 1) | (month_db['purpose_moving'] == 1) | (month_db['purpose_house'] == 1))
+        & (month_db['total_acc'] > 15)
+        #& (month_db['open_acc'] > 15)
+        & ((month_db['purpose_debt_consolidation'] == 1) | (month_db['purpose_wedding'] == 1) | (month_db['purpose_moving'] == 1) | (month_db['purpose_house'] == 1))
     ]  # .sort(['emp_length'], ascending=[False])
     print 'available', available_quantity
     matching_quantity = return_df.shape[0]
@@ -159,7 +159,7 @@ def simple_filter_buy_solver(month, investor, month_db, number, liquidity_limit)
     number = min(number, int(np.floor(liquidity_limit * matching_quantity)))
     print 'solver number restricted', number
     return_dict = {
-        'loans': return_df.sample(number) if number > 0 else return_df.iloc[0:0],#.iloc[0:number],
+        'loans': return_df.sort('annual_inc', ascending=False).iloc[0:number], # sample(number) if number > 0 else return_df.iloc[0:0],#.iloc[0:number],
         'matching quantity': matching_quantity,
         'available quantity': available_quantity
     }
@@ -185,7 +185,7 @@ def generic_buy_solver(month, investor, month_db, number, liquidity_limit):
     number = min(number, int(np.floor(liquidity_limit * available_quantity)))
     print 'solver number restricted ', number
     return_dict = {
-        'loans': return_df.sort('int_rate', ascending=False),#month_db.sample(number) if number > 0 else return_df.iloc[0:0],#.iloc[0:number],
+        'loans': return_df.sort('int_rate', ascending=False).iloc[0:number],#month_db.sample(number) if number > 0 else return_df.iloc[0:0],#.iloc[0:number],
         'matching quantity': matching_quantity,
         'available quantity': available_quantity
     }
