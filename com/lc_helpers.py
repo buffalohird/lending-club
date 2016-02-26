@@ -26,14 +26,14 @@ purposes = ['purpose_car', 'purpose_credit_card', 'purpose_debt_consolidation',
             'purpose_small_business', 'purpose_vacation', 'purpose_wedding']
 
 def get_db_folder():
-  data_folder = '../data/'
+  data_folder = 'data/'
   db_dict = {
-    'training': '{}{}'.format(downloads, 'LoanStats3a.csv'),
-    'testing': '{}{}'.format(downloads, 'LoanStats3b.csv'),
-    'testing2': '{}{}'.format(downloads, 'LoanStats3c.csv'),
-    'testing3': '{}{}'.format(downloads, 'LoanStats3d.csv'),
-    'complete': '{}{}'.format(downloads, 'LoanStatsTotal.csv'),
-    'cache': '{}{}'.format(downloads, 'loan_cache.hdf5')
+    'training': '{}{}'.format(data_folder, 'LoanStats3a.csv'),
+    'testing': '{}{}'.format(data_folder, 'LoanStats3b.csv'),
+    'testing2': '{}{}'.format(data_folder, 'LoanStats3c.csv'),
+    'testing3': '{}{}'.format(data_folder, 'LoanStats3d.csv'),
+    'complete': '{}{}'.format(data_folder, 'LoanStatsTotal.csv'),
+    'cache': '{}{}'.format(data_folder, 'loan_cache.hdf5')
   }
   return db_dict
 
@@ -50,6 +50,7 @@ def get_cache_historic(rewrite=False):
         testing3 = pd.read_csv(db['testing3']).pipe(make_df_numeric, fix_nans=True)
         historic_df = pd.concat([training, testing, testing2, testing3])
         historic_df.to_hdf(cache_file, 'historic')
+        return historic_df
 
 
 
@@ -90,8 +91,7 @@ def create_factors(short_df, return_components=True):
     short_df['defaulted'] = short_df['loan_status'].isin(['Charged Off']).astype(int)
 
     short_df['profit'] = short_df['total_pymnt'] / short_df['funded_amnt']
-    short_df['annualized_profit'] = short_df['profit'] ** (1.0/3.0)
-    short_df['annualized_ten_percent'] = short_df['annualized_profit']
+
 
 
     # create x variables
@@ -122,6 +122,9 @@ def create_factors(short_df, return_components=True):
 
     import string
     short_df['grade_int'] = short_df['grade'].apply(lambda x: string.lowercase.index(x.lower()))
+
+    short_df['annualized_profit'] = short_df['profit'] ** (1.0/(short_df['last_pymnt_d'] - short_df['issue_d']).astype(float)*12.0)
+    short_df['annualized_ten_percent'] = short_df['annualized_profit']
 
     short_df['dti'] = short_df['dti'] / 100
 

@@ -122,7 +122,6 @@ class Backtest():
         self.loan_stats['defaulted'] = pd.DataFrame({month: self.current_loans[month]['defaulted'] for month in self.current_loans if not self.current_loans[month].empty}).T.reindex(self.stats.index)
         self.loan_stats['remaining_amount'] = pd.DataFrame({month: self.current_loans[month]['remaining_amount'] for month in self.current_loans if not self.current_loans[month].empty}).T.reindex(self.stats.index)
         self.loan_stats['imbalance_percentage'] = pd.DataFrame({month: self.current_loans[month]['imbalance_percentage'] for month in self.current_loans if not self.current_loans[month].empty}).T.reindex(self.stats.index)
-        # TODO: add imbalance stats ya dickhead
 
         self.loan_stats_total = dict()
         for category in ['duration', 'int_rate', 'imbalance_percentage']: # self.loan_stats:
@@ -146,21 +145,21 @@ def simple_filter_buy_solver(month, investor, month_db, number, liquidity_limit)
     #     month_db = pd.concat([month_db for _ in xrange(0, 20 / month_db.shape[0])])
     available_quantity = month_db.shape[0]
     return_df = month_db[
-        (month_db['emp_length'] > 5.0) & 
-        (month_db['state_CA'] == 0) &
-        (month_db['own_home'] == 1) &
-        (month_db['total_acc'] > 15) &
-        ((month_db['purpose_debt_consolidation'] == 1) | (month_db['purpose_wedding'] == 1) | (month_db['purpose_moving'] == 1) | (month_db['purpose_house'] == 1))
-    ]
+        (month_db['emp_length'] > 5.0)
+        # & (month_db['state_CA'] == 0)
+        & (month_db['own_home'] == 1)
+        & (month_db['total_acc'] > 20)
+        & (month_db['open_acc'] > 15)
+        # & ((month_db['purpose_debt_consolidation'] == 1) | (month_db['purpose_wedding'] == 1) | (month_db['purpose_moving'] == 1) | (month_db['purpose_house'] == 1))
+    ]  # .sort(['emp_length'], ascending=[False])
     print 'available', available_quantity
     matching_quantity = return_df.shape[0]
     print 'matching', matching_quantity
     print 'solver number', number
     number = min(number, int(np.floor(liquidity_limit * matching_quantity)))
     print 'solver number restricted', number
-    return_df = month_db[month_db['emp_length'] > 5.0]
     return_dict = {
-        'loans': return_df.iloc[0:number],
+        'loans': return_df.sample(number) if number > 0 else return_df.iloc[0:0],#.iloc[0:number],
         'matching quantity': matching_quantity,
         'available quantity': available_quantity
     }
@@ -186,7 +185,7 @@ def generic_buy_solver(month, investor, month_db, number, liquidity_limit):
     number = min(number, int(np.floor(liquidity_limit * available_quantity)))
     print 'solver number restricted ', number
     return_dict = {
-        'loans': month_db.iloc[0:number],
+        'loans': return_df.sort('int_rate', ascending=False),#month_db.sample(number) if number > 0 else return_df.iloc[0:0],#.iloc[0:number],
         'matching quantity': matching_quantity,
         'available quantity': available_quantity
     }
