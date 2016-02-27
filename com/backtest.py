@@ -149,8 +149,8 @@ def simple_filter_buy_solver(month, investor, month_db, number, liquidity_limit)
         # & (month_db['state_CA'] == 0)
         & (month_db['own_home'] == 1)
         & (month_db['total_acc'] > 15)
-        #& (month_db['open_acc'] > 15)
-        & ((month_db['purpose_debt_consolidation'] == 1) | (month_db['purpose_wedding'] == 1) | (month_db['purpose_moving'] == 1) | (month_db['purpose_house'] == 1))
+        # & (month_db['open_acc'] > 15)
+        # & ((month_db['purpose_debt_consolidation'] == 1) | (month_db['purpose_wedding'] == 1) | (month_db['purpose_moving'] == 1) | (month_db['purpose_house'] == 1))
     ]  # .sort(['emp_length'], ascending=[False])
     print 'available', available_quantity
     matching_quantity = return_df.shape[0]
